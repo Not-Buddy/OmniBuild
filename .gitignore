@@ -1,4 +1,5 @@
 /target
 *.a
 *.o
-*.class
+src/JAVA_Code/*.class
+.env

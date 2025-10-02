@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 cc = "*"
+jni = { version = "0.21", features = ["invocation"] }
 
 [build-dependencies]
 cc = "*"

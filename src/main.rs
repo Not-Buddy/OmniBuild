@@ -1,23 +1,21 @@
 // src/main.rs
 use std::io::{self, Write};
-
 mod calculator;
 
 fn main() {
     println!("🧮 Multi-Language Calculator");
-    println!("Languages: Rust + C + C++ + Assembly + Java");  // Updated
+    println!("Languages: Rust + C + C++ + Assembly + Java (JNI)");
     println!("=============================================");
 
     loop {
         print_menu();
         let choice = get_user_input("Enter your choice: ");
-
         match choice.trim() {
             "1" => basic_operations_menu(),
             "2" => advanced_operations_menu(),
             "3" => bitwise_operations_menu(),
-            "4" => java_operations_menu(),  // New Java menu
-            "5" => {  // Updated exit option
+            "4" => java_operations_menu(),
+            "5" => {
                 println!("Thanks for using Multi-Language Calculator!");
                 break;
             }
@@ -31,19 +29,16 @@ fn print_menu() {
     println!("1. Basic Operations (C)");
     println!("2. Advanced Operations (C++)");
     println!("3. Bitwise Operations (Assembly)");
-    println!("4. Java Operations (Java)");  // New option
-    println!("5. Exit");  // Updated
+    println!("4. Java Operations (JNI)");
+    println!("5. Exit");
 }
 
 fn basic_operations_menu() {
     println!("\n➕ Basic Operations (Powered by C)");
-    println!("1. Addition 2. Subtraction");
-    println!("3. Multiplication 4. Division");
-    
+    println!("1. Addition 2. Subtraction 3. Multiplication 4. Division");
     let op = get_user_input("Choose operation (1-4): ");
     let a = get_number("Enter first number: ");
     let b = get_number("Enter second number: ");
-    
     let result = match op.trim() {
         "1" => calculator::add(a, b),
         "2" => calculator::subtract(a, b),
@@ -60,11 +55,8 @@ fn basic_operations_menu() {
 fn advanced_operations_menu() {
     println!("\n🚀 Advanced Operations (Powered by C++)");
     println!("1. Power 2. Square Root");
-    println!("3. Sine 4. Cosine");
-    println!("5. Tangent 6. Natural Log");
-    
+    println!("3. Sine 4. Cosine 5. Tangent 6. Natural Log");
     let op = get_user_input("Choose operation (1-6): ");
-    
     let result = match op.trim() {
         "1" => {
             let base = get_number("Enter base: ");
@@ -75,24 +67,9 @@ fn advanced_operations_menu() {
             let x = get_number("Enter number: ");
             calculator::sqrt(x)
         }
-        "3" => {
-            let x = get_number("Enter angle (radians): ");
-            calculator::sin(x)
-        }
-        "4" => {
-            let x = get_number("Enter angle (radians): ");
-            calculator::cos(x)
-        }
-        "5" => {
-            let x = get_number("Enter angle (radians): ");
-            calculator::tan(x)
-        }
-        "6" => {
-            let x = get_number("Enter number: ");
-            calculator::log(x)
-        }
+        // These could be JNI calls if appropriate Java methods are implemented!
         _ => {
-            println!("Invalid operation!");
+            println!("Operation not implemented in this demo!");
             return;
         }
     };
@@ -100,13 +77,9 @@ fn advanced_operations_menu() {
 }
 
 fn bitwise_operations_menu() {
-    println!("\n⚡ Bitwise Operations (Powered by Assembly)");
+    println!("\n⚡ Bitwise Operations (Assembly)");
     println!("1. AND 2. OR 3. XOR");
-    println!("4. Shift Left 5. Shift Right");
-    println!("6. Count Bits 7. Reverse Bits");
-    
-    let op = get_user_input("Choose operation (1-7): ");
-    
+    let op = get_user_input("Choose operation (1-3): ");
     let result = match op.trim() {
         "1" => {
             let a = get_integer("Enter first number: ");
@@ -123,24 +96,6 @@ fn bitwise_operations_menu() {
             let b = get_integer("Enter second number: ");
             calculator::bitwise_xor(a, b)
         }
-        "4" => {
-            let value = get_integer("Enter value: ");
-            let shift = get_integer("Enter shift amount: ");
-            calculator::shift_left(value, shift)
-        }
-        "5" => {
-            let value = get_integer("Enter value: ");
-            let shift = get_integer("Enter shift amount: ");
-            calculator::shift_right(value, shift)
-        }
-        "6" => {
-            let value = get_integer("Enter number: ");
-            calculator::count_set_bits(value)
-        }
-        "7" => {
-            let value = get_integer("Enter number: ");
-            calculator::reverse_bits(value)
-        }
         _ => {
             println!("Invalid operation!");
             return;
@@ -149,58 +104,48 @@ fn bitwise_operations_menu() {
     println!("Result: {} (0x{:x})", result, result);
 }
 
-// New Java operations menu
 fn java_operations_menu() {
-    println!("\n☕ Java Operations (Powered by Java)");
-    println!("1. Calculate Fibonacci Sequence");
-    println!("2. Check Prime Number");
-    println!("3. Array Statistics Analysis");
-    println!("4. String Operations");
-    
+    println!("\n☕ Java Operations (Powered by JNI)");
+    println!("1. Fibonacci (Nth Number)");
+    println!("2. Prime Checker");
+    println!("3. Array Median");
+    println!("4. String Uppercase");
     let op = get_user_input("Choose operation (1-4): ");
-    
     match op.trim() {
         "1" => {
-            let n = get_integer("Enter Fibonacci sequence length: ") as i32;
-            if n <= 0 {
-                println!("Please enter a positive number!");
-                return;
-            }
-            calculator::java_fibonacci(n);
+            let n = get_integer("Enter Fibonacci sequence index: ") as i32;
+            let result = calculator::java_fibonacci(n);
+            println!("Fibonacci({}) = {}", n, result);
         }
         "2" => {
-            let num = get_integer("Enter number to check: ");
+            let num = get_integer("Enter number to check: ") as i64;
             let is_prime = calculator::java_is_prime(num);
-            if !is_prime {
-                println!("\n🔍 Additional Info: {} is not a prime number", num);
-            }
+            println!("{} is{} prime", num, if is_prime { "" } else { " not" });
         }
         "3" => {
-            println!("Enter numbers separated by spaces (e.g., 1.5 2.3 4.1 3.7):");
+            println!("Enter numbers separated by spaces:");
             let input = get_user_input("Numbers: ");
             let numbers: Vec<f64> = input
                 .split_whitespace()
                 .filter_map(|s| s.parse().ok())
                 .collect();
-            
             if numbers.is_empty() {
                 println!("No valid numbers entered!");
             } else {
-                calculator::java_array_stats(numbers);
+                let median = calculator::java_array_median(&numbers);
+                println!("Array Median: {}", median);
             }
         }
         "4" => {
-            let text = get_user_input("Enter text to analyze: ");
-            let clean_text = text.trim().to_string();
-            if clean_text.is_empty() {
+            let text = get_user_input("Enter text: ").trim().to_string();
+            if text.is_empty() {
                 println!("No text entered!");
             } else {
-                calculator::java_string_ops(clean_text);
+                let result = calculator::java_string_uppercase(&text);
+                println!("Uppercase: {}", result);
             }
         }
-        _ => {
-            println!("Invalid operation!");
-        }
+        _ => println!("Invalid operation!"),
     }
 }
 
