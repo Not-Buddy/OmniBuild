@@ -1,25 +1,24 @@
-// build.rs
-use std::process::Command;
-use std::path::Path;
 use std::env;
+use std::path::Path;
+use std::process::Command;
 use std::fs;
 
 fn main() {
     println!("🔨 OmniBuild Multi-Architecture Build System");
-    
-    // Load .env file manually (no external dependency needed)
+
+    // Load .env if it exists (manually without extra dependency)
     load_env_file();
-    
-    // Set up Java environment from .env
+
+    // Setup JAVA environment
     setup_java_environment();
-    
-    // Compile all components
+
+    // Compile C/C++/Assembly/Java code
     compile_c_code();
     compile_cpp_code();
     compile_assembly_code();
     compile_java_files();
-    
-    // Set up rerun triggers
+
+    // Rerun triggers
     println!("cargo:rerun-if-changed=src/C_Code/");
     println!("cargo:rerun-if-changed=src/CPP_Code/");
     println!("cargo:rerun-if-changed=src/ASM_Code/");
@@ -36,7 +35,6 @@ fn load_env_file() {
                 continue;
             }
             if let Some((key, value)) = line.split_once('=') {
-                // Use unsafe block for set_var
                 unsafe {
                     env::set_var(key.trim(), value.trim());
                 }
@@ -44,72 +42,70 @@ fn load_env_file() {
             }
         }
     } else {
-        println!("cargo:warning=⚠️  No .env file found (this is optional)");
+        println!("cargo:warning=⚠️  No .env file found (optional)");
     }
 }
 
 fn setup_java_environment() {
     let java_home = env::var("JAVA_HOME")
-        .or_else(|_| find_java_home())
         .unwrap_or_else(|_| {
-            println!("cargo:warning=⚠️  JAVA_HOME not found in .env or environment");
+            println!("cargo:warning=⚠️  JAVA_HOME not set, attempting auto-detection");
             String::new()
         });
 
-    if !java_home.is_empty() {
-        println!("cargo:warning=☕ JAVA_HOME: {}", java_home);
-        
-        // Set environment variable for runtime
-        println!("cargo:rustc-env=JAVA_HOME={}", java_home);
-        
-        // Set library search paths for JNI
-        if cfg!(target_os = "windows") {
-            let jvm_lib = format!("{}\\bin\\server", java_home);
-            println!("cargo:rustc-link-search=native={}", jvm_lib);
+    if java_home.is_empty() {
+        println!("cargo:warning=⚠️  JAVA_HOME not found, Java integration disabled");
+        return;
+    }
+
+    println!("cargo:warning=☕ JAVA_HOME: {}", java_home);
+    println!("cargo:rustc-env=JAVA_HOME={}", &java_home);
+
+    if cfg!(target_os = "windows") {
+        let possible_dirs = [
+            format!("{}\\lib", java_home),
+            format!("{}\\lib\\server", java_home),
+            format!("{}\\bin\\server", java_home),
+        ];
+
+        for dir in &possible_dirs {
+            let jvm_path = format!("{}\\jvm.lib", dir);
+            if Path::new(&jvm_path).exists() {
+                println!("cargo:rustc-link-search=native={}", dir);
+                println!("cargo:rustc-link-lib=dylib=jvm");
+                println!("cargo:warning=Found jvm.lib at: {}", dir);
+                return;
+            }
+        }
+        println!("cargo:warning=⚠️  jvm.lib not found in JAVA_HOME");
+    } else if cfg!(target_os = "macos") {
+        let lib_server = format!("{}/lib/server", java_home);
+        let lib_root = format!("{}/lib", java_home);
+
+        if Path::new(&format!("{}/libjvm.dylib", lib_server)).exists() {
+            println!("cargo:rustc-link-search=native={}", lib_server);
             println!("cargo:rustc-link-lib=dylib=jvm");
-        } else if cfg!(target_os = "macos") {
-            let jvm_lib = format!("{}/lib/server", java_home);
-            println!("cargo:rustc-link-search=native={}", jvm_lib);
+        } else if Path::new(&format!("{}/libjvm.dylib", lib_root)).exists() {
+            println!("cargo:rustc-link-search=native={}", lib_root);
             println!("cargo:rustc-link-lib=dylib=jvm");
         } else {
-            // Linux
-            let jvm_lib = format!("{}/lib/server", java_home);
-            println!("cargo:rustc-link-search=native={}", jvm_lib);
-            println!("cargo:rustc-link-lib=dylib=jvm");
+            println!("cargo:warning=⚠️ JVM lib not found on macOS");
         }
-    }
-}
-
-fn find_java_home() -> Result<String, env::VarError> {
-    let common_paths = if cfg!(target_os = "windows") {
-        vec![
-            "C:\\Program Files\\Java\\jdk-11",
-            "C:\\Program Files\\Java\\jdk-17",
-            "C:\\Program Files\\OpenJDK\\jdk-11",
-        ]
-    } else if cfg!(target_os = "macos") {
-        vec![
-            "/Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home",
-            "/usr/local/opt/openjdk@11",
-            "/opt/homebrew/opt/openjdk@11",
-        ]
     } else {
-        vec![
-            "/usr/lib/jvm/default-java",
-            "/usr/lib/jvm/java-11-openjdk-amd64",
-            "/usr/lib/jvm/java-17-openjdk-amd64",
-            "/opt/java/openjdk",
-        ]
-    };
+        // Linux and Unix-like
+        let lib_server = format!("{}/lib/server", java_home);
+        let lib_root = format!("{}/lib", java_home);
 
-    for path in common_paths {
-        if Path::new(path).exists() {
-            println!("cargo:warning=🔍 Auto-detected Java at: {}", path);
-            return Ok(path.to_string());
+        if Path::new(&format!("{}/libjvm.so", lib_server)).exists() {
+            println!("cargo:rustc-link-search=native={}", lib_server);
+            println!("cargo:rustc-link-lib=dylib=jvm");
+        } else if Path::new(&format!("{}/libjvm.so", lib_root)).exists() {
+            println!("cargo:rustc-link-search=native={}", lib_root);
+            println!("cargo:rustc-link-lib=dylib=jvm");
+        } else {
+            println!("cargo:warning=⚠️ JVM lib not found on Linux");
         }
     }
-    
-    Err(env::VarError::NotPresent)
 }
 
 fn compile_c_code() {
@@ -137,49 +133,57 @@ fn compile_cpp_code() {
 }
 
 fn compile_assembly_code() {
-    if cfg!(target_arch = "x86_64") {
+    if cfg!(target_os = "windows") {
+        if Path::new("src/ASM_Code/bitwise_ops.asm").exists() {
+            cc::Build::new()
+                .file("src/ASM_Code/bitwise_ops.asm")
+                .compile("bitwise_ops");
+            println!("cargo:warning=✅ Windows ASM compiled");
+        } else {
+            println!("cargo:warning=⚠️  Windows ASM file not found");
+        }
+    } else if cfg!(target_arch = "x86_64") {
         if Path::new("src/ASM_Code/bitwise_ops.s").exists() {
             cc::Build::new()
                 .file("src/ASM_Code/bitwise_ops.s")
                 .compile("bitwise_ops");
-            println!("cargo:warning=✅ x86_64 Assembly compiled");
+            println!("cargo:warning=✅ Linux/Unix x86_64 ASM compiled");
         } else {
-            println!("cargo:warning=⚠️  x86_64 Assembly file not found");
+            println!("cargo:warning=⚠️  x86_64 ASM file not found");
         }
     } else if cfg!(target_arch = "aarch64") {
         if Path::new("src/ASM_Code/bitwise_ops_arm64.s").exists() {
             cc::Build::new()
                 .file("src/ASM_Code/bitwise_ops_arm64.s")
                 .compile("bitwise_ops_arm64");
-            println!("cargo:warning=✅ ARM64 Assembly compiled");
+            println!("cargo:warning=✅ ARM64 ASM compiled");
         } else {
-            println!("cargo:warning=⚠️  ARM64 Assembly file not found");
+            println!("cargo:warning=⚠️  ARM64 ASM file not found");
         }
     } else {
-        let arch = env::var("CARGO_CFG_TARGET_ARCH")
-            .unwrap_or_else(|_| "unknown".to_string());
-        println!("cargo:warning=⚠️  Assembly not supported for: {}", arch);
+        let arch = env::var("CARGO_CFG_TARGET_ARCH").unwrap_or_else(|_| "unknown".to_string());
+        println!("cargo:warning=⚠️  ASM not supported for: {}", arch);
     }
 }
 
 fn compile_java_files() {
     let java_files = [
         "src/JAVA_Code/Fibonacci.java",
-        "src/JAVA_Code/PrimeChecker.java", 
+        "src/JAVA_Code/PrimeChecker.java",
         "src/JAVA_Code/ArrayStats.java",
         "src/JAVA_Code/StringOps.java",
     ];
-    
+
     let existing_files: Vec<&str> = java_files.iter()
-        .filter(|&file| Path::new(file).exists())
+        .filter(|&&file| Path::new(file).exists())
         .copied()
         .collect();
-    
+
     if existing_files.is_empty() {
         println!("cargo:warning=⚠️  No Java source files found");
         return;
     }
-    
+
     let javac_cmd = env::var("JAVA_HOME")
         .map(|java_home| {
             if cfg!(target_os = "windows") {
@@ -189,16 +193,16 @@ fn compile_java_files() {
             }
         })
         .unwrap_or_else(|_| "javac".to_string());
-    
+
     match Command::new(&javac_cmd).args(&existing_files).output() {
         Ok(result) => {
             if result.status.success() {
                 println!("cargo:warning=✅ Java compiled ({} files)", existing_files.len());
             } else {
                 println!("cargo:warning=❌ Java compilation failed: {}", 
-                        String::from_utf8_lossy(&result.stderr));
+                    String::from_utf8_lossy(&result.stderr));
             }
         }
-        Err(_) => println!("cargo:warning=⚠️  javac not found - Java disabled"),
+        Err(_) => println!("cargo:warning=⚠️  javac not found, Java disabled"),
     }
 }
