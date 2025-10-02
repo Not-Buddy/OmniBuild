@@ -1,5 +1,11 @@
+# Rust build artifacts
 /target
 *.a
 *.o
+
+# Java compiled classes
 src/JAVA_Code/*.class
+*.class
+
+# Environment variables
 .env
