@@ -1,12 +1,9 @@
-mod javac;
-mod gcc;
-mod gpp;
-mod asm;
+mod languages;
 
-use javac::{setup_java_environment,compile_java_files};
-use gcc::compile_c_code;
-use gpp::compile_cpp_code;
-use asm::compile_assembly_code;
+use crate::languages::javac::{compile_java_files,setup_java_environment};
+use crate::languages::asm::compile_assembly_code;
+use crate::languages::gcc::compile_c_code;
+use crate::languages::gpp::compile_cpp_code;
 
 use std::env;
 use std::fs;
